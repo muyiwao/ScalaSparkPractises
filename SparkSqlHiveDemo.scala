@@ -11,17 +11,18 @@ object SparkSqlHiveDemo extends App {
 
   val spark = SparkSession.builder()
     .config(sparkconf)
-    //.master("local")
-    //.master("local[*]")
     .enableHiveSupport()
     .getOrCreate()
 
   import spark.implicits._
 
-  val schema = "date STRING, delay INT, distance INT, origin STRING, destination, STRING"
+  val schema = "date STRING, " +
+    "delay INT, " +
+    "distance INT, " +
+    "origin STRING, " +
+    "destination, STRING"
 
   val dataDF = (spark.read.format("csv")
-    //.option("inferSchema", "true")
     .option(schema, true)
     .option("header", "true")
     .load("departuredelays.csv"))
@@ -31,28 +32,27 @@ object SparkSqlHiveDemo extends App {
   //dataDF.show()
   dataDF.createOrReplaceTempView("us_delay_flights_tbl")
 
-  val record_counts = spark.sql("SELECT count(*) FROM us_delay_flights_tbl")
-  record_counts.show()
-
   //All flights whose distance is greater than 1,000 miles:
   val res = spark.sql("""SELECT date, distance, origin, destination
   FROM us_delay_flights_tbl WHERE distance > 1000
   ORDER BY distance DESC""")
-  res.show(10)
+  res.show(5)
 
-  // save the output
-  //res.write.format("csv").mode("overwrite").save("flightCsv")
+  // Create database flightDb.db
+  spark.sql("CREATE DATABASE IF NOT EXISTS flightDb LOCATION 'flightDb.db'")
 
+  //show databases
+  spark.sql("show databases").show()
 
-  //Save DataFrame as a new Hive table Use the following code
-  // to save the data frame to a new hive table named flight_table1:
-  // Save df to a new table in Hive
-  // https://kontext.tech/article/294/spark-save-dataframe-to-hive-table
+  //fetch metadata data from the catalog. database name will be listed here
+  spark.catalog.listDatabases().show()
 
-  res.write.mode("overwrite").saveAsTable("flight_table1")
+  //Save DataFrame as a new Hive table Use the following code to save the data
+  // frame to a new hive table named flight_table1:
+  res.write.mode("overwrite").saveAsTable("flightDb.flight_table1")
 
   //Show the results using SELECT
-  spark.sql("select * from flight_table1").show(5)
+  spark.sql("select * from flightDb.flight_table1").show(5)
 
 }
 
@@ -66,20 +66,14 @@ root
  |-- origin: string (nullable = true)
  |-- destination: string (nullable = true)
 
-22/12/18 20:01:19 INFO Persistence: Property hive.metastore.integral.jdo.pushdown unknown - will be ignored
-22/12/18 20:01:19 INFO Persistence: Property datanucleus.cache.level2 unknown - will be ignored
-22/12/18 20:01:20 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MFieldSchema" is tagged as "embedded-only" so does not have its own datastore table.
-22/12/18 20:01:20 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MOrder" is tagged as "embedded-only" so does not have its own datastore table.
-22/12/18 20:01:20 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MFieldSchema" is tagged as "embedded-only" so does not have its own datastore table.
-22/12/18 20:01:20 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MOrder" is tagged as "embedded-only" so does not have its own datastore table.
-22/12/18 20:01:20 INFO Query: Reading in results for query "org.datanucleus.store.rdbms.query.SQLQuery@0" since the connection used is closing
-22/12/18 20:01:21 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MResourceUri" is tagged as "embedded-only" so does not have its own datastore table.
-+--------+
-|count(1)|
-+--------+
-| 1391578|
-+--------+
-
+22/12/19 13:19:50 INFO Persistence: Property hive.metastore.integral.jdo.pushdown unknown - will be ignored
+22/12/19 13:19:50 INFO Persistence: Property datanucleus.cache.level2 unknown - will be ignored
+22/12/19 13:19:52 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MFieldSchema" is tagged as "embedded-only" so does not have its own datastore table.
+22/12/19 13:19:52 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MOrder" is tagged as "embedded-only" so does not have its own datastore table.
+22/12/19 13:19:52 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MFieldSchema" is tagged as "embedded-only" so does not have its own datastore table.
+22/12/19 13:19:52 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MOrder" is tagged as "embedded-only" so does not have its own datastore table.
+22/12/19 13:19:52 INFO Query: Reading in results for query "org.datanucleus.store.rdbms.query.SQLQuery@0" since the connection used is closing
+22/12/19 13:19:52 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MResourceUri" is tagged as "embedded-only" so does not have its own datastore table.
 +--------+--------+------+-----------+
 |    date|distance|origin|destination|
 +--------+--------+------+-----------+
@@ -96,8 +90,33 @@ root
 +--------+--------+------+-----------+
 only showing top 10 rows
 
-22/12/18 20:01:29 INFO log: Updating table stats fast for flight_table1
-22/12/18 20:01:29 INFO log: Updated size of table flight_table1 to 1374688
++------------+
+|databaseName|
++------------+
+|     default|
+|    flightdb|
++------------+
+
++--------+--------------------+--------------------+
+|    name|         description|         locationUri|
++--------+--------------------+--------------------+
+| default|Default Hive data...|file:/C:/Demos/wo...|
+|flightdb|                    |file:/C:/Demos/wo...|
++--------+--------------------+--------------------+
+
+22/12/19 13:19:54 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MFieldSchema" is tagged as "embedded-only" so does not have its own datastore table.
+22/12/19 13:19:54 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MOrder" is tagged as "embedded-only" so does not have its own datastore table.
+22/12/19 13:19:54 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MFieldSchema" is tagged as "embedded-only" so does not have its own datastore table.
+22/12/19 13:19:54 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MOrder" is tagged as "embedded-only" so does not have its own datastore table.
+22/12/19 13:19:55 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MFieldSchema" is tagged as "embedded-only" so does not have its own datastore table.
+22/12/19 13:19:55 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MOrder" is tagged as "embedded-only" so does not have its own datastore table.
+22/12/19 13:19:55 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MFieldSchema" is tagged as "embedded-only" so does not have its own datastore table.
+22/12/19 13:19:55 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MOrder" is tagged as "embedded-only" so does not have its own datastore table.
+22/12/19 13:19:55 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MFieldSchema" is tagged as "embedded-only" so does not have its own datastore table.
+22/12/19 13:19:55 INFO Datastore: The class "org.apache.hadoop.hive.metastore.model.MOrder" is tagged as "embedded-only" so does not have its own datastore table.
+22/12/19 13:19:55 INFO hivemetastoressimpl: deleting  file:/C:/Demos/wordcount1/hive_output/flightDb.db/flight_table1
+22/12/19 13:20:02 INFO log: Updating table stats fast for flight_table1
+22/12/19 13:20:02 INFO log: Updated size of table flight_table1 to 1374676
 +--------+--------+------+-----------+
 |    date|distance|origin|destination|
 +--------+--------+------+-----------+
@@ -112,5 +131,7 @@ only showing top 5 rows
 
 Process finished with exit code 0
 
+References
+https://kontext.tech/article/294/spark-save-dataframe-to-hive-table
  */
 
