@@ -1,0 +1,51 @@
+Installing Kafka on Windows
+
+prerequisite: Installing JDK 1.8
+
+Configure and Test Kafka
+Installing single node Apache Kafka cluster on Windows 10 is as straightforward as doing it on Linux. You can follow the steps defined below to run and test Kafka on Windows 10 operating system.
+
+Configure Kafka for Windows 10
+Download the Kafka binaries. This post is based on Kafka 2.0.0, and hence we assume that you are downloading 2.0.0 version for Scala 2.12.
+Un-compress the kafka_2.12-2.0.0.tgz file. You might want to use 7-zip, and you may have to use it twice to extract the files correctly.
+To make it work, we would be changing the Zookeeper data directory location.
+Open kafka_2.12-2.0.0\config\zookeeper.properties file and change the Zookeeper data directory location config to a valid windows directory location. An example value is given below.
+data Dir = C:\zookeeper_data   
+
+Make some changes in the Kafka configurations.
+Open kafka_2.12-2.0.0\config\server.properties and change/add following configuration properties.
+log.dirs=C:\kafka_logs 
+offsets.topic.num.partitions = 1 
+offsets.topic.replication.factor = 1 
+min.insync.replicas=1 
+default.replication.factor = 1
+
+The Zookeeper and the Kafka data directories must already exist. So, make sure that the C:\zookeeper_data and C:\kafka_logs is there.
+You might have already learned all the above in the earlier section. The only difference is in topic default values. We are setting topic defaults to one, and that makes sense because we will be running a single node Kafka.
+Finally, add Kafka bin\windows directory to the PATH environment variable. This directory contains a bunch of Kafka tools for the windows platform. We will be using some of those in the next section.
+
+Starting and Testing Kafka
+Kafka needs Zookeeper, so we will start Zookeeper on your Windows 10 machine using below command.
+kafka_2.12-2.0.0\bin\windows\zookeeper-server-start.bat kafka_2.12-2.0.0\config\zookeeper.properties 
+
+Start a windows command prompt and execute the above command. It should start the zookeeper server. Minimize the command window and let the zookeeper running in that window.
+Start a new command window and start Kafka Broker using below command.
+kafka_2.12-2.0.0\bin\windows\kafka-server-start.bat kafka_2.12-2.0.0\config\server.properties   
+
+The above command should start the single node Kafka Broker. Minimize the window and let the broker running in that window.
+Now, you can test the Zookeeper and Kafka. Execute below command to test the Zookeeper and Kafka broker registration to the Zookeeper server.
+kafka_2.12-2.0.0\bin\windows\zookeeper-shell.bat localhost:2181 ls /brokers/ids  
+
+You can create a new Kafka topic using below command.
+kafka_2.12-2.0.0\bin\windows\kafka-topics.bat --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic test   
+
+You can list the available topics using below command.
+kafka_2.12-2.0.0\bin\windows\kafka-topics.bat --list --zookeeper localhost:2181 
+
+You can start a console producer and send some messages using below command.
+kafka_2.12-2.0.0\bin\windows\kafka-console-producer.bat --broker-list localhost:9092 --topic test   
+
+You can start a console consumer and check the messages that you sent using below command.
+kafka_2.12-2.0.0\bin\windows\kafka-console-consumer.bat --bootstrap-server localhost:9092 --topic test --from-beginning   
+
+https://www.learningjournal.guru/article/kafka/installing-kafka-on-windows/
